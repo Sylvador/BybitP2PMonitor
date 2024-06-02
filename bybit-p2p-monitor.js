@@ -73,7 +73,6 @@ class Monitor {
 
             for (const watchedCurrency of this.watchedCurrencies) {
                 if (watchedCurrency.sleepTimer === 0) {
-                    console.log('Checking order for: ', watchedCurrency.currency)
                     const data = await this.fetch(watchedCurrency.payload);
                     const { result: { items } } = data;
                     const desiredOrder = items[0]?.price >= watchedCurrency.desiredPrice ? items[0] : null;

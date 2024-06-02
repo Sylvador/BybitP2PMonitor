@@ -3,11 +3,11 @@
     "watchedCurrencies": [
         {
             "currency": "USD",
-            "desiredPrice": 0.9
+            "desiredPrice": 0.99
         },
         {
             "currency": "GEL",
-            "desiredPrice": 2.7
+            "desiredPrice": 2.75
         }
     ]
 }
