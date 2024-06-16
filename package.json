@@ -1,5 +1,5 @@
 {
-  "type": "module",
+  "type": "commonjs",
   "dependencies": {
     "axios": "^1.7.2",
     "dotenv": "^16.4.5"
@@ -10,8 +10,12 @@
   "main": "bybit-p2p-monitor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node bybit-p2p-monitor.js"
+    "start": "npx tsc && node dist/bybit-p2p-monitor.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "typescript": "^5.4.5"
+  }
 }
