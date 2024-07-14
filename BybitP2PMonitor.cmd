@@ -1,1 +1,1 @@
-node .\bybit-p2p-monitor.js
+node .\dist\bybit-p2p-monitor.js

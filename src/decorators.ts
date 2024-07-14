@@ -1,52 +1,31 @@
 import { Monitor } from './bybit-p2p-monitor';
 import { MappedRenderer } from './renderer';
+import { MakeRendereableProperty } from './types';
+import { makeRendereableProperty } from './utils';
 
-export function Renderable(transformer?: (value: any) => string) {
+export function Renderable<T extends any>(options?: Pick<Parameters<MakeRendereableProperty>[1], 'include' | 'exclude' | 'renderKeyPrefix' | 'transformer'>) {
     return function (
         _: undefined,
-        context: ClassFieldDecoratorContext<Monitor, string | number | { [key: string]: string | number }>
+        context: ClassFieldDecoratorContext<T, string | number | { [key: string]: string | number }>
     ) {
-        const key = context.name.toString();
+        const key = context.name.toString() as keyof T & string;
+        
         context.addInitializer(function () {
             const renderer = (this as any).renderer as MappedRenderer;
-            const isObject = typeof this[key] === 'object';
-            if (isObject) {
-                const obj = this[key];
-                for (const k in obj) {
-                    if (k == 'milliseconds') continue;
-                    obj[`_${k}`] = obj[k];
-                    const set = transformer ? (value: any) => {
-                        obj[`_${k}`] = value;
-                        renderer.renderValue(k, transformer(value));
-                    } : (value: any) => {
-                        obj[`_${k}`] = value;
-                        renderer.renderValue(k, value);
-                    }
-                    Object.defineProperty(obj, k, {
-                        set,
-                        get: () => {
-                            return obj[`_${k}`]
-                        },
-                    })
-                }
-                return;
+            if (!renderer) {
+                throw new Error('No renderer found in class');
             }
-            this[`_${key}`] = this[key];
-            context.access.get = (object: any) => {
-                return object[`_${key}`];
-            };
-            if (transformer) {
-                context.access.set = (object: any, value: any) => {
-                    object[`_${key}`] = value;
-                    renderer.renderValue(key, transformer(value));
-                };
-            } else {
-                context.access.set = (object: any, value: any) => {
-                    object[`_${key}`] = value;
-                    renderer.renderValue(key, value);
-                };
-            }
+            
+            makeRendereableProperty(
+                renderer,
+                {
+                    ...options as any,
+                    target: this,
+                    key,
+                },
+            );
         })
+        
         return (initValue: any) => initValue;
     }
     

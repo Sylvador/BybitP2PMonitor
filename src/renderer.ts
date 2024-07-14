@@ -1,16 +1,21 @@
-import { Cursor } from './types';
+import { Cursor, CursorMap } from './types';
 
 export class MappedRenderer {
-    private cursorMap: { [key: string]: Cursor } = {};
+    private cursorMap: CursorMap = {};
 
-    addValuesToRender(values: { [key: string]: Cursor }) {
-        for (const key in values) {
-            this.cursorMap[key] = values[key];
+    updateCursorMap(cursorMap: CursorMap) {
+        for (const key in cursorMap) {
+            this.cursorMap[key] = {
+                cursor: [cursorMap[key].cursor[0], cursorMap[key].cursor[1]],
+                lastLength: cursorMap[key].lastLength,
+            }
         }
     }
 
     renderValue(key: string, value: string) {
-        this.writeAtCursor(this.cursorMap[key], value);
+        value = value.padEnd(this.cursorMap[key].lastLength, ' ');
+        this.cursorMap[key].lastLength = value.length;
+        this.writeAtCursor(this.cursorMap[key].cursor, value);
     }
 
     clearLineAfterCursor(cursor: Cursor) {
