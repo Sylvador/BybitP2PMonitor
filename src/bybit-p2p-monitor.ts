@@ -4,6 +4,7 @@ import {
     Config,
     Cursor,
     CursorMap,
+    FetchStatus,
     IHttpResult,
     IWatchedCurrency,
     OrdersResponse,
@@ -24,12 +25,6 @@ const byBitClient = new Axios({
     },
 });
 
-const fetchStatuses = {
-    SLEEPING: 'SLEEPING',
-    FETCHING: 'FETCHING',
-} as const;
-type FetchStatus = (typeof fetchStatuses)[keyof typeof fetchStatuses];
-
 export class Monitor {
     private renderer = new MappedRenderer();
     private fetchInterval: number;
@@ -43,7 +38,7 @@ export class Monitor {
     private fetchTimer: number = 0;
 
     @Renderable()
-    private fetchStatus: FetchStatus = fetchStatuses.SLEEPING;
+    private fetchStatus: FetchStatus = FetchStatus.SLEEPING;
     private sleepTime: number;
     private watchedCurrencies: IWatchedCurrency[];
     private chatId: string;
@@ -93,7 +88,6 @@ export class Monitor {
             Time.setDeltaTime();
             this.renderer.renderValue('deltaTime', Time.deltaTime.toFixed(0));
             this.updateTimers();
-            // this.renderTerminal();
             await this.checkOrders();
         }, 1000);
     }
@@ -102,7 +96,7 @@ export class Monitor {
         try {
             if (
                 this.fetchTimer > 0 ||
-                this.fetchStatus === fetchStatuses.FETCHING ||
+                this.fetchStatus === FetchStatus.FETCHING ||
                 this.watchedCurrencies.every((wc) => wc.sleepTimer > 0)
             )
                 return;
@@ -133,12 +127,12 @@ export class Monitor {
     }
 
     async fetch(payload: IWatchedCurrency['payload']): Promise<OrdersResponse> {
-        this.fetchStatus = fetchStatuses.FETCHING;
+        this.fetchStatus = FetchStatus.FETCHING;
         const { data } = (await byBitClient.post(
             '',
             payload
         )) as IHttpResult<OrdersResponse>;
-        this.fetchStatus = fetchStatuses.SLEEPING;
+        this.fetchStatus = FetchStatus.SLEEPING;
         return data;
     }
 
@@ -240,7 +234,7 @@ export class Monitor {
         cursorMap.fetchStatus = {cursor: [
             fetchStatusTxt.length,
             this.watchedCurrencies.length + 2,
-        ], lastLength: fetchStatuses.FETCHING.length };
+        ], lastLength: FetchStatus.FETCHING.length };
         process.stdout.write(fetchStatusTxt + this.fetchStatus + '\n');
         const deltaTimeTxt = 'DeltaTime: ';
         cursorMap.deltaTime = { cursor: [

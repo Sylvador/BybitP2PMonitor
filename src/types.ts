@@ -135,3 +135,9 @@ export type Cursor = [row: number, column: number];
 export type CursorMap = { [key: string]: { cursor: Cursor; lastLength: number } };
 
 export type MakeRendereableProperty = typeof import('./utils').makeRendereableProperty;
+
+export const FetchStatus = {
+    SLEEPING: 'SLEEPING',
+    FETCHING: 'FETCHING',
+} as const;
+export type FetchStatus = (typeof FetchStatus)[keyof typeof FetchStatus];
