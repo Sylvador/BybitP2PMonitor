@@ -1,27 +1,19 @@
-import axios, { Axios } from 'axios';
-import process from 'process';
-import {
-    Config,
-    Cursor,
-    CursorMap,
-    FetchStatus,
-    IHttpResult,
-    IWatchedCurrency,
-    OrdersResponse,
-} from './types';
-import { Renderable } from './decorators';
-import { MappedRenderer } from './renderer';
-import { autoBind, makeRendereableProperty } from './utils';
-import { Time } from './time';
+import axios, { Axios } from "axios";
+import process from "process";
+import { Config, CursorMap, FetchStatus, IHttpResult, IWatchedCurrency, OrdersResponse } from "./types";
+import { Renderable } from "./decorators";
+import { MappedRenderer } from "./renderer";
+import { autoBind, makeRendereableProperty } from "./utils";
+import { Time } from "./time";
 
-require('dotenv').config();
-const url = 'https://api2.bybit.com/fiat/otc/item/online';
+require("dotenv").config();
+const url = "https://api2.bybit.com/fiat/otc/item/online";
 
 const byBitClient = new Axios({
     baseURL: url,
     ...axios.defaults,
     headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
     },
 });
 
@@ -31,9 +23,9 @@ export class Monitor {
 
     @Renderable({
         transformer: (fetchTimer: number) =>
-        Math.floor(fetchTimer / 1000)
-            .toString()
-            .padStart(2, '0')
+            Math.floor(fetchTimer / 1000)
+                .toString()
+                .padStart(2, "0"),
     })
     private fetchTimer: number = 0;
 
@@ -51,23 +43,22 @@ export class Monitor {
         this.sleepingCurrenciesCounter = 0;
 
         this.sleepTime = 1000 * 60 * config.sleepTimeAfterFindingDesiredOrder;
-        this.watchedCurrencies = config.watchedCurrencies.map(
-            (watchedCurrency) =>
-                Object.assign(watchedCurrency, {
-                    sleepTimer: 0,
-                    payload: {
-                        userId: 110341422,
-                        tokenId: 'USDT',
-                        currencyId: watchedCurrency.currency,
-                        payment: ['359'],
-                        side: '0',
-                        size: '1',
-                        page: '1',
-                        amount: '',
-                        authMaker: false,
-                        canTrade: false,
-                    } as any,
-                })
+        this.watchedCurrencies = config.watchedCurrencies.map((watchedCurrency) =>
+            Object.assign(watchedCurrency, {
+                sleepTimer: 0,
+                payload: {
+                    userId: 110341422,
+                    tokenId: "USDT",
+                    currencyId: watchedCurrency.currency,
+                    payment: ["359"],
+                    side: "0",
+                    size: "1",
+                    page: "1",
+                    amount: "",
+                    authMaker: false,
+                    canTrade: false,
+                } as any,
+            }),
         );
 
         this.chatId = process.env.TELEGRAM_CHAT_ID as string;
@@ -77,7 +68,7 @@ export class Monitor {
             baseURL: `https://api.telegram.org/bot${this.telegramBotToken}`,
             ...axios.defaults,
             headers: {
-                'Content-Type': 'application/json',
+                "Content-Type": "application/json",
             },
         });
         autoBind(this);
@@ -86,7 +77,7 @@ export class Monitor {
     async monitor() {
         setInterval(async () => {
             Time.setDeltaTime();
-            this.renderer.renderValue('deltaTime', Time.deltaTime.toFixed(0));
+            this.renderer.renderValue("deltaTime", Time.deltaTime.toFixed(0));
             this.updateTimers();
             await this.checkOrders();
         }, 1000);
@@ -105,14 +96,16 @@ export class Monitor {
 
             for (const watchedCurrency of this.watchedCurrencies) {
                 if (watchedCurrency.sleepTimer === 0) {
-                    const data = await this.fetch(watchedCurrency.payload);
+                    const data = await this.fetch(watchedCurrency.payload).catch((reason) => {
+                        this.notifyAboutError(reason);
+                    });
+                    if (!data) {
+                        continue;
+                    }
                     const {
                         result: { items },
                     } = data;
-                    const desiredOrder =
-                        +items[0]?.price >= watchedCurrency.desiredPrice
-                            ? items[0]
-                            : null;
+                    const desiredOrder = +items[0]?.price >= watchedCurrency.desiredPrice ? items[0] : null;
                     if (desiredOrder) {
                         await this.notify(desiredOrder);
                         watchedCurrency.sleepTimer = this.sleepTime;
@@ -126,25 +119,29 @@ export class Monitor {
         }
     }
 
-    async fetch(payload: IWatchedCurrency['payload']): Promise<OrdersResponse> {
+    async fetch(payload: IWatchedCurrency["payload"]): Promise<OrdersResponse | undefined> {
         this.fetchStatus = FetchStatus.FETCHING;
-        const { data } = (await byBitClient.post(
-            '',
-            payload
-        )) as IHttpResult<OrdersResponse>;
+        let orders: OrdersResponse | undefined;
+        try {
+            const request = () => byBitClient.post("", payload);
+            const { data } = (await this.retry(request)) as IHttpResult<OrdersResponse>;
+            orders = data;
+        } catch {
+            //TODO render error
+        }
         this.fetchStatus = FetchStatus.SLEEPING;
-        return data;
+        return orders;
     }
 
     clearTerminal() {
-        process.stdout.write('\x1b[?25l'); // Hide the cursor
-        process.stdout.write('\x1b[2J'); // Clear the terminal
-        process.stdout.write('\x1b[0;0H'); // Move the cursor to the top-left corner
+        process.stdout.write("\x1b[?25l"); // Hide the cursor
+        process.stdout.write("\x1b[2J"); // Clear the terminal
+        process.stdout.write("\x1b[0;0H"); // Move the cursor to the top-left corner
     }
 
     @Renderable({
-        transformer: (value: number) => value.toString().padStart(2, '0'),
-        exclude: ['milliseconds']
+        transformer: (value: number) => value.toString().padStart(2, "0"),
+        exclude: ["milliseconds"],
     })
     runTime = {
         milliseconds: 0,
@@ -172,76 +169,67 @@ export class Monitor {
         }
         this.fetchTimer = Math.max(this.fetchTimer - Time.deltaTime, 0);
         for (const watchedCurrency of this.watchedCurrencies) {
-            watchedCurrency.sleepTimer = Math.max(
-                watchedCurrency.sleepTimer - Time.deltaTime,
-                0
-            );
+            watchedCurrency.sleepTimer = Math.max(watchedCurrency.sleepTimer - Time.deltaTime, 0);
         }
     }
 
-    formatTime(
-        hours: number | string,
-        minutes: number | string,
-        seconds: number | string
-    ) {
-        return `${hours.toString().padStart(2, '0')}:${minutes
-            .toString()
-            .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    formatTime(hours: number | string, minutes: number | string, seconds: number | string) {
+        return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
     }
 
     renderTemplateAndMapRenderValues() {
         const cursorMap: CursorMap = {};
-        const appIsRunningForTxt = 'App is running for: ';
-        cursorMap.hours = { cursor: [appIsRunningForTxt.length, 0], lastLength: 2 };
-        cursorMap.minutes = { cursor: [appIsRunningForTxt.length + 3, 0], lastLength: 2 };
-        cursorMap.seconds = { cursor: [appIsRunningForTxt.length + 6, 0], lastLength: 2 };
+        const appIsRunningForTxt = "App is running for: ";
+        cursorMap.hours = {
+            cursor: [appIsRunningForTxt.length, 0],
+            lastLength: 2,
+        };
+        cursorMap.minutes = {
+            cursor: [appIsRunningForTxt.length + 3, 0],
+            lastLength: 2,
+        };
+        cursorMap.seconds = {
+            cursor: [appIsRunningForTxt.length + 6, 0],
+            lastLength: 2,
+        };
         process.stdout.write(
-            appIsRunningForTxt +
-                this.formatTime(
-                    this.runTime.hours,
-                    this.runTime.minutes,
-                    this.runTime.seconds
-                ) +
-                '\n'
+            appIsRunningForTxt + this.formatTime(this.runTime.hours, this.runTime.minutes, this.runTime.seconds) + "\n",
         );
-        const fetchTimerTxt = 'Fetch timer: ';
-        cursorMap.fetchTimer = { cursor: [fetchTimerTxt.length, 1], lastLength: 2 };
-        process.stdout.write(
-            fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + '\n'
-        );
+        const fetchTimerTxt = "Fetch timer: ";
+        cursorMap.fetchTimer = {
+            cursor: [fetchTimerTxt.length, 1],
+            lastLength: 2,
+        };
+        process.stdout.write(fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + "\n");
         for (let i = 0; i < this.watchedCurrencies.length; i++) {
             const watchedCurrency = this.watchedCurrencies[i];
             const currencySleepTimerTxt = `${watchedCurrency.currency} sleep timer: `;
             const renderKeyPrefix = watchedCurrency.currency;
-            const renderKey = `${renderKeyPrefix}.sleepTimer`
-            cursorMap[renderKey] = { cursor: [
-                currencySleepTimerTxt.length,
-                i + 2,
-            ], lastLength: 4 };
+            const renderKey = `${renderKeyPrefix}.sleepTimer`;
+            cursorMap[renderKey] = {
+                cursor: [currencySleepTimerTxt.length, i + 2],
+                lastLength: 4,
+            };
             makeRendereableProperty(this.renderer, {
-                key: 'sleepTimer',
+                key: "sleepTimer",
                 target: watchedCurrency,
                 renderKeyPrefix,
-                transformer: (value: number) => (value/1000).toFixed(0),
+                transformer: (value: number) => (value / 1000).toFixed(0),
             });
-            process.stdout.write(
-                currencySleepTimerTxt +
-                    Math.floor(watchedCurrency.sleepTimer / 1000) +
-                    '\n'
-            );
+            process.stdout.write(currencySleepTimerTxt + Math.floor(watchedCurrency.sleepTimer / 1000) + "\n");
         }
-        const fetchStatusTxt = 'Fetch status: ';
-        cursorMap.fetchStatus = {cursor: [
-            fetchStatusTxt.length,
-            this.watchedCurrencies.length + 2,
-        ], lastLength: FetchStatus.FETCHING.length };
-        process.stdout.write(fetchStatusTxt + this.fetchStatus + '\n');
-        const deltaTimeTxt = 'DeltaTime: ';
-        cursorMap.deltaTime = { cursor: [
-            deltaTimeTxt.length,
-            this.watchedCurrencies.length + 3,
-        ], lastLength: 4 };
-        process.stdout.write(deltaTimeTxt + Time.deltaTime + '\n');
+        const fetchStatusTxt = "Fetch status: ";
+        cursorMap.fetchStatus = {
+            cursor: [fetchStatusTxt.length, this.watchedCurrencies.length + 2],
+            lastLength: FetchStatus.FETCHING.length,
+        };
+        process.stdout.write(fetchStatusTxt + this.fetchStatus + "\n");
+        const deltaTimeTxt = "DeltaTime: ";
+        cursorMap.deltaTime = {
+            cursor: [deltaTimeTxt.length, this.watchedCurrencies.length + 3],
+            lastLength: 4,
+        };
+        process.stdout.write(deltaTimeTxt + Time.deltaTime + "\n");
         this.renderer.updateCursorMap(cursorMap);
     }
 
@@ -252,23 +240,37 @@ export class Monitor {
     }
 
     async notifyAboutError(error: any) {
-        await this.botClient.post(`/sendMessage`, {
-            chat_id: this.chatId,
-            text: error.message,
-        });
+        const request = () =>
+            this.botClient.post(`/sendMessage`, {
+                chat_id: this.chatId,
+                text: error.message,
+            });
+        return this.retry(request);
+    }
+
+    async retry(request: Function) {
+        let retries = 3;
+        while (retries > 0) {
+            --retries;
+            const res = await request();
+            if (res.status === 200) return res;
+        }
+        //TODO render error
     }
 
     async notify(order: any) {
         const { id, price, minAmount, maxAmount, currencyId } = order;
         const message = `Currency: ${currencyId}, Price: ${price}, Min: ${minAmount}, Max: ${maxAmount}, ID: ${id}`;
-        await this.botClient.post(`/sendMessage`, {
-            chat_id: this.chatId,
-            text: message,
-        });
+        const request = () =>
+            this.botClient.post(`/sendMessage`, {
+                chat_id: this.chatId,
+                text: message,
+            });
+        this.retry(request);
     }
 }
 
-const config = require('../config.json');
+const config = require("../config.json");
 const monitor = new Monitor(config);
 
 monitor.startApp();
