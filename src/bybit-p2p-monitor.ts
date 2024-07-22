@@ -105,7 +105,13 @@ export class Monitor {
                     const {
                         result: { items },
                     } = data;
-                    const desiredOrder = +items[0]?.price >= watchedCurrency.desiredPrice ? items[0] : null;
+                    const topOrder = items[0];
+                    this.renderer.renderValue(
+                        `${watchedCurrency.currency}.bestOrder`,
+                        `{ price: ${topOrder.price}; minAmount: ${topOrder.minAmount}; maxAmount: ${topOrder.maxAmount} }`,
+                    );
+
+                    const desiredOrder = +topOrder?.price >= watchedCurrency.desiredPrice ? topOrder : null;
                     if (desiredOrder) {
                         await this.notify(desiredOrder);
                         watchedCurrency.sleepTimer = this.sleepTime;
@@ -180,34 +186,38 @@ export class Monitor {
     renderTemplateAndMapRenderValues() {
         const cursorMap: CursorMap = {};
         const appIsRunningForTxt = "App is running for: ";
+        let cursorRow = 0;
         cursorMap.hours = {
-            cursor: [appIsRunningForTxt.length, 0],
+            cursor: [appIsRunningForTxt.length, cursorRow],
             lastLength: 2,
         };
         cursorMap.minutes = {
-            cursor: [appIsRunningForTxt.length + 3, 0],
+            cursor: [appIsRunningForTxt.length + 3, cursorRow],
             lastLength: 2,
         };
         cursorMap.seconds = {
-            cursor: [appIsRunningForTxt.length + 6, 0],
+            cursor: [appIsRunningForTxt.length + 6, cursorRow],
             lastLength: 2,
         };
         process.stdout.write(
             appIsRunningForTxt + this.formatTime(this.runTime.hours, this.runTime.minutes, this.runTime.seconds) + "\n",
         );
+        ++cursorRow;
         const fetchTimerTxt = "Fetch timer: ";
         cursorMap.fetchTimer = {
-            cursor: [fetchTimerTxt.length, 1],
+            cursor: [fetchTimerTxt.length, cursorRow],
             lastLength: 2,
         };
         process.stdout.write(fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + "\n");
-        for (let i = 0; i < this.watchedCurrencies.length; i++) {
+
+        ++cursorRow;
+        for (let i = 0; i < this.watchedCurrencies.length; ++i, cursorRow += 2) {
             const watchedCurrency = this.watchedCurrencies[i];
             const currencySleepTimerTxt = `${watchedCurrency.currency} sleep timer: `;
             const renderKeyPrefix = watchedCurrency.currency;
             const renderKey = `${renderKeyPrefix}.sleepTimer`;
             cursorMap[renderKey] = {
-                cursor: [currencySleepTimerTxt.length, i + 2],
+                cursor: [currencySleepTimerTxt.length, cursorRow],
                 lastLength: 4,
             };
             makeRendereableProperty(this.renderer, {
@@ -217,16 +227,24 @@ export class Monitor {
                 transformer: (value: number) => (value / 1000).toFixed(0),
             });
             process.stdout.write(currencySleepTimerTxt + Math.floor(watchedCurrency.sleepTimer / 1000) + "\n");
+
+            const lastBestCurrencyOrderTxt = `Last best order for ${watchedCurrency.currency}: `;
+            process.stdout.write(lastBestCurrencyOrderTxt + "\n");
+            cursorMap[renderKeyPrefix + ".bestOrder"] = {
+                cursor: [lastBestCurrencyOrderTxt.length, cursorRow + 1],
+                lastLength: 8,
+            };
         }
         const fetchStatusTxt = "Fetch status: ";
         cursorMap.fetchStatus = {
-            cursor: [fetchStatusTxt.length, this.watchedCurrencies.length + 2],
+            cursor: [fetchStatusTxt.length, cursorRow],
             lastLength: FetchStatus.FETCHING.length,
         };
+        ++cursorRow;
         process.stdout.write(fetchStatusTxt + this.fetchStatus + "\n");
         const deltaTimeTxt = "DeltaTime: ";
         cursorMap.deltaTime = {
-            cursor: [deltaTimeTxt.length, this.watchedCurrencies.length + 3],
+            cursor: [deltaTimeTxt.length, cursorRow],
             lastLength: 4,
         };
         process.stdout.write(deltaTimeTxt + Time.deltaTime + "\n");

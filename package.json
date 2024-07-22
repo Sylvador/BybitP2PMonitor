@@ -8,7 +8,7 @@
   "name": "bybit-p2p-monitor",
   "version": "0.0.1",
   "description": "script that monitors p2p orders list and sends telegram notification, if requirements of an order are met",
-  "main": "bybit-p2p-monitor.js",
+  "main": "dist/bybit-p2p-monitor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npx tsc && node dist/bybit-p2p-monitor.js"
