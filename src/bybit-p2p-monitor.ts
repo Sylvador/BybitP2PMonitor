@@ -106,10 +106,16 @@ export class Monitor {
                         result: { items },
                     } = data;
                     const topOrder = items[0];
-                    this.renderer.renderValue(
-                        `${watchedCurrency.currency}.bestOrder`,
-                        `{ price: ${topOrder.price}; minAmount: ${topOrder.minAmount}; maxAmount: ${topOrder.maxAmount} }`,
-                    );
+
+                    const renderKey = `${watchedCurrency.currency}.bestOrder`;
+                    if (topOrder) {
+                        this.renderer.renderValue(
+                            renderKey,
+                            `{ price: ${topOrder.price}; minAmount: ${topOrder.minAmount}; maxAmount: ${topOrder.maxAmount} }`,
+                        );
+                    } else {
+                        this.renderer.renderValue(renderKey, `{ no available orders }`);
+                    }
 
                     const desiredOrder = +topOrder?.price >= watchedCurrency.desiredPrice ? topOrder : null;
                     if (desiredOrder) {
