@@ -11,7 +11,8 @@
   "main": "dist/bybit-p2p-monitor.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "npx tsc && node dist/bybit-p2p-monitor.js"
+    "start": "npx tsc && node dist/bybit-p2p-monitor.js",
+    "start:prod": "node dist/bybit-p2p-monitor.js"
   },
   "author": "",
   "license": "ISC",
