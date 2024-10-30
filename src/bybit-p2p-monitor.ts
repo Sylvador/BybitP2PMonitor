@@ -1,19 +1,19 @@
-import axios, { Axios } from "axios";
-import process from "process";
-import { Config, CursorMap, FetchStatus, IHttpResult, IWatchedCurrency, OrdersResponse } from "./types";
-import { Renderable } from "./decorators";
-import { MappedRenderer } from "./renderer";
-import { autoBind, makeRendereableProperty } from "./utils";
-import { Time } from "./time";
+import axios, { Axios } from 'axios';
+import process from 'process';
+import { Config, CursorMap, FetchStatus, IHttpResult, IWatchedCurrency, OrdersResponse } from './types';
+import { Renderable } from './decorators';
+import { MappedRenderer } from './renderer';
+import { autoBind, makeRendereableProperty } from './utils';
+import { Time } from './time';
 
-require("dotenv").config();
-const url = "https://api2.bybit.com/fiat/otc/item/online";
+require('dotenv').config();
+const url = 'https://api2.bybit.com/fiat/otc/item/online';
 
 const byBitClient = new Axios({
     baseURL: url,
     ...axios.defaults,
     headers: {
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
     },
 });
 
@@ -25,7 +25,7 @@ export class Monitor {
         transformer: (fetchTimer: number) =>
             Math.floor(fetchTimer / 1000)
                 .toString()
-                .padStart(2, "0"),
+                .padStart(2, '0'),
     })
     private fetchTimer: number = 0;
 
@@ -48,13 +48,13 @@ export class Monitor {
                 sleepTimer: 0,
                 payload: {
                     userId: 110341422,
-                    tokenId: "USDT",
+                    tokenId: 'USDT',
                     currencyId: watchedCurrency.currency,
-                    payment: ["359"],
-                    side: "0",
-                    size: "1",
-                    page: "1",
-                    amount: "",
+                    payment: ['359'],
+                    side: '0',
+                    size: '1',
+                    page: '1',
+                    amount: '',
                     authMaker: false,
                     canTrade: false,
                 } as any,
@@ -68,7 +68,7 @@ export class Monitor {
             baseURL: `https://api.telegram.org/bot${this.telegramBotToken}`,
             ...axios.defaults,
             headers: {
-                "Content-Type": "application/json",
+                'Content-Type': 'application/json',
             },
         });
         autoBind(this);
@@ -77,7 +77,7 @@ export class Monitor {
     async monitor() {
         setInterval(async () => {
             Time.setDeltaTime();
-            this.renderer.renderValue("deltaTime", Time.deltaTime.toFixed(0));
+            this.renderer.renderValue('deltaTime', Time.deltaTime.toFixed(0));
             this.updateTimers();
             await this.checkOrders();
         }, 1000);
@@ -131,11 +131,11 @@ export class Monitor {
         }
     }
 
-    async fetch(payload: IWatchedCurrency["payload"]): Promise<OrdersResponse | undefined> {
+    async fetch(payload: IWatchedCurrency['payload']): Promise<OrdersResponse | undefined> {
         this.fetchStatus = FetchStatus.FETCHING;
         let orders: OrdersResponse | undefined;
         try {
-            const request = () => byBitClient.post("", payload);
+            const request = () => byBitClient.post('', payload);
             const { data } = (await this.retry(request)) as IHttpResult<OrdersResponse>;
             orders = data;
         } catch {
@@ -146,14 +146,14 @@ export class Monitor {
     }
 
     clearTerminal() {
-        process.stdout.write("\x1b[?25l"); // Hide the cursor
-        process.stdout.write("\x1b[2J"); // Clear the terminal
-        process.stdout.write("\x1b[0;0H"); // Move the cursor to the top-left corner
+        process.stdout.write('\x1b[?25l'); // Hide the cursor
+        process.stdout.write('\x1b[2J'); // Clear the terminal
+        process.stdout.write('\x1b[0;0H'); // Move the cursor to the top-left corner
     }
 
     @Renderable({
-        transformer: (value: number) => value.toString().padStart(2, "0"),
-        exclude: ["milliseconds"],
+        transformer: (value: number) => value.toString().padStart(2, '0'),
+        exclude: ['milliseconds'],
     })
     runTime = {
         milliseconds: 0,
@@ -186,12 +186,12 @@ export class Monitor {
     }
 
     formatTime(hours: number | string, minutes: number | string, seconds: number | string) {
-        return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
     renderTemplateAndMapRenderValues() {
         const cursorMap: CursorMap = {};
-        const appIsRunningForTxt = "App is running for: ";
+        const appIsRunningForTxt = 'App is running for: ';
         let cursorRow = 0;
         cursorMap.hours = {
             cursor: [appIsRunningForTxt.length, cursorRow],
@@ -206,15 +206,15 @@ export class Monitor {
             lastLength: 2,
         };
         process.stdout.write(
-            appIsRunningForTxt + this.formatTime(this.runTime.hours, this.runTime.minutes, this.runTime.seconds) + "\n",
+            appIsRunningForTxt + this.formatTime(this.runTime.hours, this.runTime.minutes, this.runTime.seconds) + '\n',
         );
         ++cursorRow;
-        const fetchTimerTxt = "Fetch timer: ";
+        const fetchTimerTxt = 'Fetch timer: ';
         cursorMap.fetchTimer = {
             cursor: [fetchTimerTxt.length, cursorRow],
             lastLength: 2,
         };
-        process.stdout.write(fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + "\n");
+        process.stdout.write(fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + '\n');
 
         ++cursorRow;
         for (let i = 0; i < this.watchedCurrencies.length; ++i, cursorRow += 2) {
@@ -227,33 +227,33 @@ export class Monitor {
                 lastLength: 4,
             };
             makeRendereableProperty(this.renderer, {
-                key: "sleepTimer",
+                key: 'sleepTimer',
                 target: watchedCurrency,
                 renderKeyPrefix,
                 transformer: (value: number) => (value / 1000).toFixed(0),
             });
-            process.stdout.write(currencySleepTimerTxt + Math.floor(watchedCurrency.sleepTimer / 1000) + "\n");
+            process.stdout.write(currencySleepTimerTxt + Math.floor(watchedCurrency.sleepTimer / 1000) + '\n');
 
             const lastBestCurrencyOrderTxt = `Last best order for ${watchedCurrency.currency}: `;
-            process.stdout.write(lastBestCurrencyOrderTxt + "\n");
-            cursorMap[renderKeyPrefix + ".bestOrder"] = {
+            process.stdout.write(lastBestCurrencyOrderTxt + '\n');
+            cursorMap[renderKeyPrefix + '.bestOrder'] = {
                 cursor: [lastBestCurrencyOrderTxt.length, cursorRow + 1],
                 lastLength: 8,
             };
         }
-        const fetchStatusTxt = "Fetch status: ";
+        const fetchStatusTxt = 'Fetch status: ';
         cursorMap.fetchStatus = {
             cursor: [fetchStatusTxt.length, cursorRow],
             lastLength: FetchStatus.FETCHING.length,
         };
         ++cursorRow;
-        process.stdout.write(fetchStatusTxt + this.fetchStatus + "\n");
-        const deltaTimeTxt = "DeltaTime: ";
+        process.stdout.write(fetchStatusTxt + this.fetchStatus + '\n');
+        const deltaTimeTxt = 'DeltaTime: ';
         cursorMap.deltaTime = {
             cursor: [deltaTimeTxt.length, cursorRow],
             lastLength: 4,
         };
-        process.stdout.write(deltaTimeTxt + Time.deltaTime + "\n");
+        process.stdout.write(deltaTimeTxt + Time.deltaTime + '\n');
         this.renderer.updateCursorMap(cursorMap);
     }
 
@@ -294,7 +294,7 @@ export class Monitor {
     }
 }
 
-const config = require("../config.json");
+const config = require('../config.json');
 const monitor = new Monitor(config);
 
 monitor.startApp();

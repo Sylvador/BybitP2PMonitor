@@ -8,7 +8,7 @@ export class MappedRenderer {
             this.cursorMap[key] = {
                 cursor: [cursorMap[key].cursor[0], cursorMap[key].cursor[1]],
                 lastLength: cursorMap[key].lastLength,
-            }
+            };
         }
     }
 
