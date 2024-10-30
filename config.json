@@ -1,13 +1,13 @@
 {
-    "sleepTimeAfterFindingDesiredOrder": 60,
-    "watchedCurrencies": [
-        {
-            "currency": "USD",
-            "desiredPrice": 0.99
-        },
-        {
-            "currency": "GEL",
-            "desiredPrice": 2.8
-        }
-    ]
+	"sleepTimeAfterFindingDesiredOrder": 60,
+	"watchedCurrencies": [
+		{
+			"currency": "USD",
+			"desiredPrice": 0.99
+		},
+		{
+			"currency": "GEL",
+			"desiredPrice": 2.8
+		}
+	]
 }
