@@ -36,9 +36,9 @@ export class Monitor {
 
     @Renderable({
         transformer: (fetchTimer: number) =>
-        Math.floor(fetchTimer / 1000)
-            .toString()
-            .padStart(2, '0')
+            Math.floor(fetchTimer / 1000)
+                .toString()
+                .padStart(2, '0'),
     })
     private fetchTimer: number = 0;
 
@@ -72,7 +72,7 @@ export class Monitor {
                         authMaker: false,
                         canTrade: false,
                     } as any,
-                })
+                }),
         );
 
         this.chatId = process.env.TELEGRAM_CHAT_ID as string;
@@ -115,6 +115,10 @@ export class Monitor {
                     const {
                         result: { items },
                     } = data;
+                    this.renderer.renderValue(
+                        `current${watchedCurrency.currency}Rate`,
+                        items[0]?.price ?? '...',
+                    );
                     const desiredOrder =
                         +items[0]?.price >= watchedCurrency.desiredPrice
                             ? items[0]
@@ -136,7 +140,7 @@ export class Monitor {
         this.fetchStatus = fetchStatuses.FETCHING;
         const { data } = (await byBitClient.post(
             '',
-            payload
+            payload,
         )) as IHttpResult<OrdersResponse>;
         this.fetchStatus = fetchStatuses.SLEEPING;
         return data;
@@ -150,7 +154,7 @@ export class Monitor {
 
     @Renderable({
         transformer: (value: number) => value.toString().padStart(2, '0'),
-        exclude: ['milliseconds']
+        exclude: ['milliseconds'],
     })
     runTime = {
         milliseconds: 0,
@@ -180,7 +184,7 @@ export class Monitor {
         for (const watchedCurrency of this.watchedCurrencies) {
             watchedCurrency.sleepTimer = Math.max(
                 watchedCurrency.sleepTimer - Time.deltaTime,
-                0
+                0,
             );
         }
     }
@@ -188,7 +192,7 @@ export class Monitor {
     formatTime(
         hours: number | string,
         minutes: number | string,
-        seconds: number | string
+        seconds: number | string,
     ) {
         return `${hours.toString().padStart(2, '0')}:${minutes
             .toString()
@@ -198,56 +202,79 @@ export class Monitor {
     renderTemplateAndMapRenderValues() {
         const cursorMap: CursorMap = {};
         const appIsRunningForTxt = 'App is running for: ';
-        cursorMap.hours = { cursor: [appIsRunningForTxt.length, 0], lastLength: 2 };
-        cursorMap.minutes = { cursor: [appIsRunningForTxt.length + 3, 0], lastLength: 2 };
-        cursorMap.seconds = { cursor: [appIsRunningForTxt.length + 6, 0], lastLength: 2 };
+        cursorMap.hours = {
+            cursor: [appIsRunningForTxt.length, 0],
+            lastLength: 2,
+        };
+        cursorMap.minutes = {
+            cursor: [appIsRunningForTxt.length + 3, 0],
+            lastLength: 2,
+        };
+        cursorMap.seconds = {
+            cursor: [appIsRunningForTxt.length + 6, 0],
+            lastLength: 2,
+        };
         process.stdout.write(
             appIsRunningForTxt +
                 this.formatTime(
                     this.runTime.hours,
                     this.runTime.minutes,
-                    this.runTime.seconds
+                    this.runTime.seconds,
                 ) +
-                '\n'
+                '\n',
         );
         const fetchTimerTxt = 'Fetch timer: ';
-        cursorMap.fetchTimer = { cursor: [fetchTimerTxt.length, 1], lastLength: 2 };
+        cursorMap.fetchTimer = {
+            cursor: [fetchTimerTxt.length, 1],
+            lastLength: 2,
+        };
         process.stdout.write(
-            fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + '\n'
+            fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + '\n',
         );
         for (let i = 0; i < this.watchedCurrencies.length; i++) {
             const watchedCurrency = this.watchedCurrencies[i];
             const currencySleepTimerTxt = `${watchedCurrency.currency} sleep timer: `;
             const renderKeyPrefix = watchedCurrency.currency;
-            const renderKey = `${renderKeyPrefix}.sleepTimer`
-            cursorMap[renderKey] = { cursor: [
-                currencySleepTimerTxt.length,
-                i + 2,
-            ], lastLength: 4 };
+            const renderKey = `${renderKeyPrefix}.sleepTimer`;
+            cursorMap[renderKey] = {
+                cursor: [currencySleepTimerTxt.length, i + 2],
+                lastLength: 4,
+            };
             makeRendereableProperty(this.renderer, {
                 key: 'sleepTimer',
                 target: watchedCurrency,
                 renderKeyPrefix,
-                transformer: (value: number) => (value/1000).toFixed(0),
+                transformer: (value: number) => (value / 1000).toFixed(0),
             });
             process.stdout.write(
                 currencySleepTimerTxt +
                     Math.floor(watchedCurrency.sleepTimer / 1000) +
-                    '\n'
+                    '\n',
             );
         }
         const fetchStatusTxt = 'Fetch status: ';
-        cursorMap.fetchStatus = {cursor: [
-            fetchStatusTxt.length,
-            this.watchedCurrencies.length + 2,
-        ], lastLength: fetchStatuses.FETCHING.length };
+        cursorMap.fetchStatus = {
+            cursor: [fetchStatusTxt.length, this.watchedCurrencies.length + 2],
+            lastLength: fetchStatuses.FETCHING.length,
+        };
         process.stdout.write(fetchStatusTxt + this.fetchStatus + '\n');
         const deltaTimeTxt = 'DeltaTime: ';
-        cursorMap.deltaTime = { cursor: [
-            deltaTimeTxt.length,
-            this.watchedCurrencies.length + 3,
-        ], lastLength: 4 };
+        cursorMap.deltaTime = {
+            cursor: [deltaTimeTxt.length, this.watchedCurrencies.length + 3],
+            lastLength: 4,
+        };
         process.stdout.write(deltaTimeTxt + Time.deltaTime + '\n');
+        this.watchedCurrencies.forEach((value, i) => {
+            const currentRate = `Current ${value.currency} Rate: `;
+            cursorMap[`current${value.currency}Rate`] = {
+                cursor: [
+                    currentRate.length,
+                    this.watchedCurrencies.length + 4 + i,
+                ],
+                lastLength: 3,
+            };
+            process.stdout.write(currentRate + '...\n');
+        });
         this.renderer.updateCursorMap(cursorMap);
     }
 
