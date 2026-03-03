@@ -223,59 +223,46 @@ export class Monitor {
                 ) +
                 '\n',
         );
-        const fetchTimerTxt = 'Fetch timer: ';
-        cursorMap.fetchTimer = {
-            cursor: [fetchTimerTxt.length, 1],
-            lastLength: 2,
-        };
-        process.stdout.write(
-            fetchTimerTxt + Math.floor(this.fetchTimer / 1000) + '\n',
+        this.renderer.updateCursorMap(cursorMap);
+        this.renderer.addRenderable(
+            'fetchTimer',
+            Math.floor(this.fetchTimer / 1000) + '\n',
+            'Fetch timer: ',
         );
         for (let i = 0; i < this.watchedCurrencies.length; i++) {
             const watchedCurrency = this.watchedCurrencies[i];
             const currencySleepTimerTxt = `${watchedCurrency.currency} sleep timer: `;
             const renderKeyPrefix = watchedCurrency.currency;
             const renderKey = `${renderKeyPrefix}.sleepTimer`;
-            cursorMap[renderKey] = {
-                cursor: [currencySleepTimerTxt.length, i + 2],
-                lastLength: 4,
-            };
             makeRendereableProperty(this.renderer, {
                 key: 'sleepTimer',
                 target: watchedCurrency,
                 renderKeyPrefix,
                 transformer: (value: number) => (value / 1000).toFixed(0),
             });
-            process.stdout.write(
-                currencySleepTimerTxt +
-                    Math.floor(watchedCurrency.sleepTimer / 1000) +
-                    '\n',
+            this.renderer.addRenderable(
+                renderKey,
+                Math.floor(watchedCurrency.sleepTimer / 1000) + '\n',
+                currencySleepTimerTxt,
             );
         }
-        const fetchStatusTxt = 'Fetch status: ';
-        cursorMap.fetchStatus = {
-            cursor: [fetchStatusTxt.length, this.watchedCurrencies.length + 2],
-            lastLength: fetchStatuses.FETCHING.length,
-        };
-        process.stdout.write(fetchStatusTxt + this.fetchStatus + '\n');
-        const deltaTimeTxt = 'DeltaTime: ';
-        cursorMap.deltaTime = {
-            cursor: [deltaTimeTxt.length, this.watchedCurrencies.length + 3],
-            lastLength: 4,
-        };
-        process.stdout.write(deltaTimeTxt + Time.deltaTime + '\n');
+        this.renderer.addRenderable(
+            'fetchStatus',
+            this.fetchStatus + '\n',
+            'Fetch status: ',
+        );
+        this.renderer.addRenderable(
+            'deltaTime',
+            Time.deltaTime + '\n',
+            'DeltaTime: ',
+        );
         this.watchedCurrencies.forEach((value, i) => {
-            const currentRate = `Current ${value.currency} Rate: `;
-            cursorMap[`current${value.currency}Rate`] = {
-                cursor: [
-                    currentRate.length,
-                    this.watchedCurrencies.length + 4 + i,
-                ],
-                lastLength: 3,
-            };
-            process.stdout.write(currentRate + '...\n');
+            this.renderer.addRenderable(
+                `current${value.currency}Rate`,
+                '...\n',
+                `Current ${value.currency} Rate: `,
+            );
         });
-        this.renderer.updateCursorMap(cursorMap);
     }
 
     async startApp() {
